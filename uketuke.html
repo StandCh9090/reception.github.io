@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>受付機アプリ</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f4f6f8;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .container {
+      background: #ffffff;
+      width: 100%;
+      max-width: 420px;
+      padding: 24px;
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 1.5rem;
+    }
+    label {
+      display: block;
+      margin-top: 16px;
+      font-weight: 600;
+    }
+    input, select, button {
+      width: 100%;
+      margin-top: 8px;
+      padding: 12px;
+      font-size: 1rem;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+    button {
+      margin-top: 24px;
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      font-size: 1.1rem;
+    }
+    button:active {
+      background: #1e40af;
+    }
+    .complete {
+      text-align: center;
+      font-size: 1.2rem;
+      color: #16a34a;
+      margin-top: 20px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>受付</h1>
+    <button id="fullscreenBtn" onclick="enterFullscreen()" style="margin-bottom:12px;">全画面で表示</button>
+
+    <label>QRコード受付</label>
+    <button onclick="startQR()" style="margin-bottom:12px;">📷 カメラでQRを読み取る</button>
+    <video id="preview" style="width:100%;display:none;border-radius:8px;"></video>
+
+    <label for="name">お名前</label>
+    <input type="text" id="name" placeholder="例：山田 太郎" />
+
+    <label for="purpose">ご用件</label>
+    <select id="purpose">
+      <option value="">選択してください</option>
+      <option>打ち合わせ</option>
+      <option>面談</option>
+      <option>見学</option>
+      <option>その他</option>
+    </select>
+
+    <label for="staff">訪問先</label>
+    <input type="text" id="staff" placeholder="例：◯◯先生" />
+
+    <button onclick="submitReception()">受付する</button>
+
+    <div class="complete" id="completeMessage">
+      <div id="receptionTime" style="margin-top:12px;font-size:1rem;color:#444;"></div>
+      受付が完了しました。<br />
+      少々お待ちください。
+    </div>
+  </div>
+
+  <script>
+    function enterFullscreen() {
+      const elem = document.documentElement;
+      if (elem.requestFullscreen) {
+        elem.requestFullscreen();
+      } else if (elem.webkitRequestFullscreen) {
+        elem.webkitRequestFullscreen(); // iOS Safari
+      }
+    }
+
+    function handleQR() {
+      const qr = document.getElementById('qrInput').value.trim();
+      if (!qr) return;
+
+      // 想定フォーマット: 名前,用件,訪問先
+      const parts = qr.split(',');
+      if (parts.length >= 3) {
+        document.getElementById('name').value = parts[0];
+        document.getElementById('purpose').value = parts[1];
+        document.getElementById('staff').value = parts[2];
+      }
+    }
+
+    function submitReception() {
+      const name = document.getElementById('name').value.trim();
+      const purpose = document.getElementById('purpose').value;
+      const staff = document.getElementById('staff').value.trim();
+
+      if (!name || !purpose || !staff) {
+        alert('すべて入力してください');
+        return;
+      }
+
+      const time = new Date();
+      const timeStr = time.toLocaleString();
+
+      console.log('受付情報', {
+        name: name,
+        purpose: purpose,
+        staff: staff,
+        time: timeStr
+      });
+
+      document.getElementById('receptionTime').textContent = `受付日時：${timeStr}`;
+
+      document.getElementById('completeMessage').style.display = 'block';
+      document.getElementById('name').value = '';
+      document.getElementById('purpose').value = '';
+      document.getElementById('staff').value = '';
+    }
+      let scanner;
+
+    function startQR() {
+      document.getElementById('preview').style.display = 'block';
+
+      if (!scanner) {
+        scanner = new Instascan.Scanner({ video: document.getElementById('preview') });
+        scanner.addListener('scan', function (content) {
+          // 想定フォーマット: 名前,用件,訪問先
+          const parts = content.split(',');
+          if (parts.length >= 3) {
+            document.getElementById('name').value = parts[0];
+            document.getElementById('purpose').value = parts[1];
+            document.getElementById('staff').value = parts[2];
+          }
+          scanner.stop();
+          document.getElementById('preview').style.display = 'none';
+        });
+      }
+
+      Instascan.Camera.getCameras().then(function (cameras) {
+        if (cameras.length > 0) {
+          scanner.start(cameras[0]);
+        } else {
+          alert('カメラが見つかりません');
+        }
+      }).catch(function (e) {
+        alert(e);
+      });
+    }
+  </script>
+  <script src="https://rawgit.com/schmich/instascan-builds/master/instascan.min.js"></script>
+</body>
+</html>
